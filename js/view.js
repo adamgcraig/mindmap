@@ -379,13 +379,16 @@ function postSetCoordinates(node,x,y) {
 }//end of function postSetCoordinates
 
 function postSetText(id,text) {
-    if( node.localCanEdit() ) {
-        var edit = new Object();
-        edit[EDIT] = SET_TEXT;
-        edit[ID] = id;
-        edit[TEXT] = text;
-        postEdit(edit);
-    }//end of if localCanEdit
+    //We already check whether local can edit before we open the editor window
+    //and check whether the editing user has the lock before making the change to the SVG image.
+    //We do not need to look up the node by its ID here.
+    //if( node.localCanEdit() ) {
+    var edit = new Object();
+    edit[EDIT] = SET_TEXT;
+    edit[ID] = id;
+    edit[TEXT] = text;
+    postEdit(edit);
+    //}//end of if localCanEdit
 }//end of function postSetText
 
 function postMakeNode(id,x,y) {
