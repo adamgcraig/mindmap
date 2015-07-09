@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../js/findview.js"></script>
+</head>
+<body onload="init();">
+<form onsubmit="return false;">
+    <input type="search" id="nameField" name="nameField" pattern="[\w]+" title="View names should consist of one or more letters, numbers, and/or underscores." placeholder="view name" oninput="checkNameAllowed();" onsearch="searchNoRefresh(event); return false;" autofocus/>
+    <input type="button" id="searchButton" name="searchButton" onclick="search();" value="search"/>
+    <input type="button" id="makeViewButton" name="makeViewButton" onclick="makeView();" value="make" disabled/>
+</form>
+    <table id="resultsTable">
+        <th><td>link</td><td>first edited (UTC)</td><td>last edited (UTC)</td><td>use</td><td>up to (UTC)</td></th>
+        <tr id="noResultsRow">
+            <td> <a class="result-link" href="#" target="_blank">no results</a>                                         </td> 
+            <td> <time class="first-time"></time>                                                                       </td>
+            <td> <time class="last-time"></time>                                                                        </td>
+            <td> <input class="delete-button" type="button" value="delete" onclick="deleteView(event);" disabled/>      </td>
+            <td> <input class="use-checkbox" type="checkbox" onchange="updateViewsToUse(event);" disabled/>              </td>
+            <td> <input class="up-to-datetime" type="datetime-local" oninput="updateCutoffDatetimes(event);" disabled/> </td>
+        </tr>
+    </table>
+</body>
+</html>

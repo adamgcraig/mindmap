@@ -1,0 +1,60 @@
+.node, .label, .edge {
+  stroke-width: 5;
+  stroke: black;
+}
+
+.node, .label {
+  fill: white;
+}
+
+.node:hover {
+  stroke: blue;
+}
+
+.label:hover {
+  stroke: yellow;
+}
+
+.edge {
+  fill: transparent;
+  stroke: blue;
+}
+
+.edge:hover {
+  stroke: red;
+}
+
+.arrowhead {
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  stroke-width: 1;
+  stroke: black;
+  fill: black;
+}
+
+.node-text, .label-text {
+    fill: black;
+    stroke: black;
+    font-family: sans-serif;
+    text-anchor: left;
+    font-size:12pt;
+}
+
+.move-tab {
+  stroke-width: 1;
+  stroke: black;
+  fill: green;  
+  cursor: move;
+}
+
+.edge-tab {
+  stroke-width: 1;
+  stroke: black;
+  fill: blue;
+}
+
+.remove-tab {
+  stroke-width: 1;
+  stroke: black;
+  fill: red;
+}

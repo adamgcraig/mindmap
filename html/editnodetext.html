@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../js/view.js"></script>
+</head>
+<body onload="loadOldNodeText();">
+
+<form onsubmit="return false;">
+    <label for="nodeText">node text:</label>
+    <input type="search" id="nodeText" name="nodeText" oninput="storeNewNodeText(event);" onsearch="closeWhenDone(event);" autofocus/>
+</form>
+
+</body>
+</html>

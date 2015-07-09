@@ -1,0 +1,66 @@
+labeled graph
+
+As an abstraction, a labeled graph is an ordered pair of sets (V,E),
+a set V, say {x_1, x_2, x_3, ...}, and a set E, consisting of triples, say 
+{(x_{from,1},x_{label,1},x_{to,1}),
+ (x_{from,2},x_{label,2},x_{to,2}),
+ (x_{from,3},x_{label,3},x_{to,3}),
+ ...}, wherein each x_{...} is an element of V.
+
+As a linguistic construct, it represents a set of constructs and assertions about those constructs. Each triple, (x_{from},x_{label},x_{to}) represents an assertion, "Concept x_{from} relates in a way described by concept x_{label} to concept x_{to}." For example, the statement "Bees make honey." is equivalent to (bees,make,honey). Since "make" is itself a concept, one can make further assertions about it, such as (make,in this context means,produce within their bodies by an enzymatic process) or (the set of verbs that abstract away the details of a process,includes,make). 
+
+One can represent a labeled graph visually in many different ways. One way is to represent the concepts as individual circles with words, pictures, or other visual representations of those concepts inside the circles and represent the assertions with paths from the "from" concept circle to the "to" concept circle with an arrowhead at the end closet to and pointing toward the "to" circle and with a smaller copy of the "label" concept circle overlayed atop the path at some point along it.
+
+A description of a labeled graph in digital form consists of a set of representations in memory of the individual concepts and of the assertions. The representation of an assertion could consist of copies of the representations of the three concepts or references to the locations of those representations in memory.
+
+The following are tasks we wish to be able to perform with the graph that affect how we should represent it in memory:
+1. Determine whether a given description of a concept already exists.
+2. Determine whether a description approximately semantically equivalent to a given description of a concept already exists.
+3. Add a concept.
+4. Remove a concept.
+5. Determine whether a given assertion already exists.
+6. Determine whether an assertion approximately semantically equivalent to a given assertion already exists.
+7. Add an assertion.
+8. Remove an assertion.
+9. Retrieve all assertions in which a given concept occupies a certain position.
+10. Retrieve all assertions in which each of two given concepts occupies a certain position.
+
+1. identical concept search: If the concepts occupy an unordered collection, it is necessary to search the entire collection until one finds the matching description. Collections that would allow more efficient searching include an ordered collection, such as an aray with elements in lexicographic order, a hash map, or a prefix tree.
+
+unordered collection: In the worst case, in which the target is not in the list or at the very end and in which every description is identical except for the last bit, the search takes O(NxL) time where in N is the number of descriptions and L is the length of the target description.
+
+ordered list: An ordered list lets us perform a binary search, picking an element from the middle of the list, determining whether the target comes before or after it, picking an element from the middle of the appropriate half of the list, determining whether the target comes before or after it, and so on. In the worst case, in which all descriptions are identical except for the last bit and none of the descriptions chosen as midpoints are the target, the search takes O(log(N)xL) time.
+
+prefix tree: One searches a prefix tree by using the value of each bit in the target to determine which branch to take. Searching a prefix tree takes at most O(L) time.
+
+hash map: Lookup in a hash map takes a fixed length of time proportional to the number of bits used to compute the hash. The tradeoff for this speed is the risk of collisions, wherein it the hashmap tries to store two descriptions in the same location.
+
+2. approximately equivalent concept search: How to implement this depends on what concepts are approximately equivalent. If an exact match and approximate match already exist in the graph, a human curator or script could add an assertion (exact match,is approximately equivalent to,approximate match), which would make it simple to retrieve the approximately equivalent result along with the exact result. However, if one or the other does not exist, it is necessary to compare  a target with each potential approximate match using some measure of distance. A simple measure would just take into account lexicographic differences, as in the Damerau-Levenshtein distance, but one that takes into account semantic similarities, as between corresponding capital and lowercase letters or between numerals and words for numbers, could be more useful. Here again, the data structure used to keep track of the concept representations in memory matters.
+
+unordered collection: In an unordered collection, it would be necessary to compare the distances of the target from all items. 
+
+ordered list: An ordering on a list represents a relative distance measure in a one-dimensional space. An item immediately before or after the target is closer than one that is two or three items away from it. However, the description, being of arbitrary length, is effectively infinte-dimensional, so any projection onto a one-dimensional space is likely to lose some information. As a heuristic, if one has some prior knowledge of the distribution of points in the higher-dimensional space, one can pick the component with greatest variation as the one on which to base the ordering of the list, locate where the target should occur in this list by binary search, then search outward from that location. If this principal component accounts for a lot of the variation, this approach will typically do better than a blind search.
+
+prefix tree: The prefix tree 
+
+hash map: The hash map likewise requires a search through all items, as descriptions with similar hashes may be distant from each other.
+
+3. add concept:
+
+4. remove concept:
+
+5. identical assertion search: 
+
+6. Determine whether an assertion approximately semantically equivalent to a given assertion already exists.
+
+7. Add an assertion.
+
+8. Remove an assertion.
+
+9. Retrieve all assertions in which a given concept occupies a certain position.
+
+10. Retrieve all assertions in which each of two given concepts occupies a certain position.
+
+
+A description of a visual representation of the labeled graph as described above would need the descriptions of concepts to include how to visually represent them, including their sizes and locations in the image, and descriptions of edges to include the paths they trace, the thicknesses and colors of the paths, the locations, sizes, shapes, and colors of the arrowheads at the ends, and the locations and sizes of the visual representations of the labels on the paths.
+

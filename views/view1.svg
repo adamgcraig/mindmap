@@ -1,0 +1,22 @@
+<?xml version="1.0" standalone="no"?>
+<?xml-stylesheet type="text/css" href="../css/plain.css"?>
+<svg id="svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:evt="http://www.w3.org/2001/xml-events" version="1.1" baseProfile="full" width="100%" height="100%" onload="viewOnload();" onclick="backgroundOnclick(evt);">
+<!--Apparently, events have to be passed in as evt, not event in Firefox and should be passed in as evt in general.
+    See http://stackoverflow.com/questions/8431503/onmouseover-event-in-firefox-inside-svg for more.-->
+<title id="viewId">view1</title>
+<script type="text/javascript" xlink:href="../js/view.js"/>
+<defs>
+    <g id="nodeTemplate">
+        <text dx="0" dy="0" class="node-text" onclick="launchEditNodeText(evt);">Click to edit.</text>
+        <circle cx="0" cy="0" r="5" class="move-tab" title="Click to move." onclick="setNodeToMove(evt);"/>
+        <circle cx="0" cy="0" r="5" class="edge-tab" title="Click to add to an edge." onclick="addToEdge(evt);"/>
+        <circle cx="0" cy="0" r="5" class="remove-tab" title="Click to remove." onclick="onclickRemoveNode(evt);"/>
+    </g>
+    <path id="edgeTemplate" class="edge" onclick="onclickRemoveEdge(evt);"/>
+</defs>
+<text id="explanation" class="node-text" x="100" y="20">Click to add node.</text>
+<g id="graphContainer">
+    <g id="edgeContainer"></g>
+    <g id="nodeContainer"></g>
+</g>
+</svg>

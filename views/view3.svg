@@ -1,0 +1,20 @@
+<?xml version="1.0" standalone="no"?>
+<?xml-stylesheet type="text/css" href="../css/plain.css"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:event="http://www.w3.org/2001/xml-events" id="svg" version="1.1" baseProfile="full" width="100%" height="100%" onload="viewOnload();" onclick="backgroundOnclick(event);">
+<title id="viewId">view3</title>
+<script type="text/javascript" xlink:href="../js/view.js"/>
+<defs>
+    <g id="nodeTemplate">
+        <text dx="0" dy="0" class="node-text" onclick="launchEditNodeText(event);">Click to edit.</text>
+        <circle cx="0" cy="0" r="5" class="move-tab" title="Click to move." onclick="setNodeToMove(event);"/>
+        <circle cx="0" cy="0" r="5" class="edge-tab" title="Click to add to an edge." onclick="addToEdge(event);"/>
+        <circle cx="0" cy="0" r="5" class="remove-tab" title="Click to remove." onclick="onclickRemoveNode(event);"/>
+    </g>
+    <path id="edgeTemplate" class="edge" onclick="onclickRemoveEdge(event);"/>
+</defs>
+<text id="explanation" class="node-text" x="100" y="20">Click to add node.</text>
+<g id="graphContainer">
+    <g id="edgeContainer"/>
+    <g id="nodeContainer"/>
+</g>
+</svg>
