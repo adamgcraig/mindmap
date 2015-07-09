@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../js/view.js"></script>
+</head>
+<body onload="loadOldUserName();">
+
+<form onsubmit="return false;">
+    <label for="userName">user name:</label>
+    <input type="search" id="userName" name="nodeText" oninput="storeNewUserName(event);" onsearch="closeWhenDone(event);" autofocus/>
+</form>
+
+</body>
+</html>

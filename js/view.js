@@ -9,6 +9,8 @@ var VIEW_ID = 'viewId';
 var NODE_ID = 'nodeId';
 //key at which to locally store the text of the node to modify:
 var NODE_TEXT = 'nodeText';
+//key at which to locally store the user name:
+var USER_NAME = 'userName';
 //ID of the element that contains both the node container and the edge container
 var GRAPH_CONTAINER = 'graphContainer';
 //ID of the element to which we add and from which we remove nodes:
@@ -32,6 +34,7 @@ var TEXT = 'text';
 var FROM_ID = 'fromId';
 var LABEL_ID = 'labelId';
 var TO_ID = 'toId';
+//var USER_NAME = 'userName';-tag each edit with a user name.
 //has VIEW_ID if the edit is SET_VIEW_ID
 //values of EDIT:
 var SET_VIEW_ID = 'setViewId';
@@ -41,6 +44,18 @@ var MAKE_NODE = 'makeNode';
 var REMOVE_NODE = 'removeNode';
 var MAKE_EDGE = 'makeEdge';
 var REMOVE_EDGE = 'removeEdge';
+var LOCK_NODE = 'lockNode';
+var UNLOCK_NODE = 'unlockNode';
+
+//---LOGIN---
+
+function loadOldUserName() {
+    document.getElementById('userName').value = localStorage.getItem(USER_NAME);
+}// end of function loadOldNodeText
+
+function storeNewUserName(evt) {
+    localStorage.setItem(USER_NAME,evt.target.value);
+}// end of function storeNewNodeText
 
 //---EDITNODETEXT---
 
@@ -62,6 +77,9 @@ function storeNewNodeText(evt) {
 //    window.arguments[0].setText(evt.target.value);
 //}// end of function storeNewNodeText
 
+//---both LOGIN and EDITNODETEXT---
+
+//also use
 function closeWhenDone(event) {
     console.log(event);
     close();
@@ -148,6 +166,33 @@ function getNodeText() {
     return this.nodeText.textContent;
 }// end of function getNodeText
 
+function setNodeLocked(boolVal, ownerName) {
+    this.locked = boolVal;
+    this.lockOwner = ownerName;
+    if(  this.localCanEdit()  ) {
+        this.setAttributeNS(null,'class','node');
+    }
+    else {
+        this.setAttributeNS(null,'class','node-locked');
+    }
+}// end of function setNodeLocked
+
+function getNodeLocked() {
+    return this.locked;
+}// end of function getNodeLocked
+
+function getNodeLockOwner() {
+    return this.lockOwner;
+}// end of function getNodeLockOwner
+
+function canEditNode(userName) {
+    return !this.getLocked() || ( this.getLockOwner() == userName );
+}// end of function canEditNode
+
+function localCanEditNode() {
+    return this.canEdit( localStorage.getItem(USER_NAME) );
+}//end of localCanEditNode
+
 function makeNode(newId,newX,newY) {
     template = document.getElementById('nodeTemplate');
     newNode = template.cloneNode(true);//deep
@@ -155,12 +200,18 @@ function makeNode(newId,newX,newY) {
     makeNodeShortcuts(newNode);
     newNode.setCoordinates = setNodeCoordinates;
     newNode.setText = setNodeText;
+    newNode.setLocked = setNodeLocked;
     newNode.getText = getNodeText;
     newNode.getX = getNodeX;
     newNode.getY = getNodeY;
+    newNode.getLocked = getNodeLocked;
+    newNode.getLockOwner = getNodeLockOwner;
+    newNode.canEdit = canEditNode;
+    newNode.localCanEdit = localCanEditNode;
     newNode.edges = [];
     document.getElementById(NODE_CONTAINER).appendChild(newNode);
     newNode.setCoordinates(newX,newY);
+    newNode.setLocked(false, null);
 }// end of makeNode
 
 function removeNode(node) {
@@ -239,13 +290,17 @@ function syncWorkerOnMessage(event) {
         case SET_COORDINATES:
             var node = document.getElementById(event.data[ID]);
             if(node != null) {
-                node.setCoordinates(event.data[X],event.data[Y]);
+                if( node.canEdit(event.data[USER_NAME]) ) {
+                    node.setCoordinates(event.data[X],event.data[Y]);
+                }
             }
         break;
         case SET_TEXT:
             var node = document.getElementById(event.data[ID]);
             if(node != null) {
-                node.setText(event.data[TEXT]);
+                if( node.canEdit(event.data[USER_NAME]) ) {
+                    node.setText(event.data[TEXT]);
+                }
             }
         break;
         case MAKE_NODE:
@@ -254,7 +309,24 @@ function syncWorkerOnMessage(event) {
         case REMOVE_NODE:
             var node = document.getElementById(event.data[ID]);
             if(node != null) {
-                removeNode(node);
+                if( node.canEdit(event.data[USER_NAME]) ) {
+                    removeNode(node);
+                }
+            }
+        break;
+        case LOCK_NODE:
+            var node = document.getElementById(event.data[ID]);
+            if(node != null) {
+                node.setLocked(true,event.data[USER_NAME]);
+            }
+        break;
+        case UNLOCK_NODE:
+            var node = document.getElementById(event.data[ID]);
+            if(node != null) {
+                //Check that the right user is doing the unlocking.
+                if( node.getLockOwner() == event.data[USER_NAME] ) {
+                    node.setLocked(false,null);
+                }
             }
         break;
         case MAKE_EDGE:
@@ -277,42 +349,43 @@ function syncWorkerOnMessage(event) {
     }//end of switch over different edits
 }// end of syncWorkerOnMessage
 
+function postEdit(edit) {
+    edit[USER_NAME] = localStorage.getItem(USER_NAME);
+    if( syncWorker != null ) {
+        syncWorker.postMessage( edit );
+        console.log("sent edit:");
+        console.log(edit);
+    }
+}//end of function postEdit
+
 //Set view ID just adds the view ID for future reference.
 //No edit with this name comes back to the main thread.
 function postSetViewId() {
     var edit = new Object();
     edit[EDIT] = SET_VIEW_ID;
     edit[VIEW_ID] = viewId;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    postEdit(edit);
 }//end of function postSetViewId
 
 function postSetCoordinates(node,x,y) {
-    var edit = new Object();
-    edit[EDIT] = SET_COORDINATES;
-    edit[ID] = node.id;
-    edit[X] = x;
-    edit[Y] = y;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    if( node.localCanEdit() ) {
+        var edit = new Object();
+        edit[EDIT] = SET_COORDINATES;
+        edit[ID] = node.id;
+        edit[X] = x;
+        edit[Y] = y;
+        postEdit(edit);
+    }//end of if localCanEdit
 }//end of function postSetCoordinates
 
 function postSetText(id,text) {
-    var edit = new Object();
-    edit[EDIT] = SET_TEXT;
-    edit[ID] = id;
-    edit[TEXT] = text;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    if( node.localCanEdit() ) {
+        var edit = new Object();
+        edit[EDIT] = SET_TEXT;
+        edit[ID] = id;
+        edit[TEXT] = text;
+        postEdit(edit);
+    }//end of if localCanEdit
 }//end of function postSetText
 
 function postMakeNode(id,x,y) {
@@ -321,23 +394,35 @@ function postMakeNode(id,x,y) {
     edit[ID] = id;
     edit[X] = x;
     edit[Y] = y;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    postEdit(edit);
 }//end of function postMakeNode
 
 function postRemoveNode(node) {
-    var edit = new Object();
-    edit[EDIT] = REMOVE_NODE;
-    edit[ID] = node.id;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    if( node.localCanEdit() ) {
+        var edit = new Object();
+        edit[EDIT] = REMOVE_NODE;
+        edit[ID] = node.id;
+        postEdit(edit);
+    }//end of if localCanEdit
 }//end of function postRemoveNode
+
+function postLockNode(node) {
+    if( node.localCanEdit() ) {
+        var edit = new Object();
+        edit[EDIT] = LOCK_NODE;
+        edit[ID] = node.id;
+        postEdit(edit);
+    }//end of if localCanEdit
+}//end of function postLockNode
+
+function postUnlockNode(node) {
+    if( node.localCanEdit() ) {
+        var edit = new Object();
+        edit[EDIT] = UNLOCK_NODE;
+        edit[ID] = node.id;
+        postEdit(edit);
+    }//end of if localCanEdit
+}//end of function postUnlockNode
 
 function postMakeEdge(id,from,label,to) {
     var edit = new Object();
@@ -346,22 +431,14 @@ function postMakeEdge(id,from,label,to) {
     edit[FROM_ID] = from.id;
     edit[LABEL_ID] = label.id;
     edit[TO_ID] = to.id;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    postEdit(edit);
 }//end of function postMakeEdge
 
 function postRemoveEdge(edge) {
     var edit = new Object();
     edit[EDIT] = REMOVE_EDGE;
     edit[ID] = edge.id;
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    postEdit(edit);
 }//end of function postRemoveEdge
 
 function viewOnload() {
@@ -380,11 +457,17 @@ function viewOnload() {
 
 function launchEditNodeText(evt) {
     var node = evt.target.parentNode;
-    localStorage.setItem(VIEW_ID, viewId);
-    localStorage.setItem(NODE_ID, node.id);
-    localStorage.setItem( NODE_TEXT, node.getText() );
-    var strWindowFeatures = "left="+( screenX+node.getX() )+",top="+( screenY + node.getY() )+",width=300,height=100,menubar=0,toolbar=0,location=0,personalbar=0,status=0,dialog=1,scrollbars=0,titlebar=0,alwaysRaised=1";
-    open('../html/editnodetext.html', node.id, strWindowFeatures);
+    if( node.localCanEdit() ) {
+        localStorage.setItem(VIEW_ID, viewId);
+        localStorage.setItem(NODE_ID, node.id);
+        localStorage.setItem( NODE_TEXT, node.getText() );
+        var strWindowFeatures = "left="+( screenX+node.getX() )+",top="+( screenY + node.getY() )+",width=300,height=100,menubar=0,toolbar=0,location=0,personalbar=0,status=0,dialog=1,scrollbars=0,titlebar=0,alwaysRaised=1";
+        postLockNode(node);
+        var editor = open('../html/editnodetext.html', node.id, strWindowFeatures);
+        editor.onclose = function() {
+            postUnlockNode(node);
+        }
+    }//end of if localCanEdit
     stopBubbling(evt);
 }// end of function launchEditNodeText
 
@@ -417,7 +500,8 @@ function stopBubbling(evt) {
 }// end of function stopBubbling
 
 function setNodeToMove(evt) {
-    nodeToMove = evt.target.parentNode;
+    var node = evt.target.parentNode;
+    nodeToMove = node;
     stopBubbling(evt);
 }// end of function setNodeToMove
 

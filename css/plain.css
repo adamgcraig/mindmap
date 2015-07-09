@@ -1,9 +1,9 @@
-.node, .label, .edge {
+.node, .node-locked, .label, .edge {
   stroke-width: 5;
   stroke: black;
 }
 
-.node, .label {
+.node, .node-locked, .label {
   fill: white;
 }
 
@@ -13,6 +13,10 @@
 
 .label:hover {
   stroke: yellow;
+}
+
+.node-locked {
+  opacity: 0.5;
 }
 
 .edge {
