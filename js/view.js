@@ -61,6 +61,9 @@ function storeNewUserName(evt) {
 
 function loadOldNodeText() {
     document.getElementById('nodeText').value = localStorage.getItem(NODE_TEXT);
+    //When we are done editing, set the ID to null.
+    //This signals the SVG view to unlock the node.
+    window.addEventListener("beforeunload", function(evt){ localStorage.setItem(NODE_ID, null); }, false);
 }// end of function loadOldNodeText
 
 function storeNewNodeText(evt) {
@@ -77,11 +80,9 @@ function storeNewNodeText(evt) {
 //    window.arguments[0].setText(evt.target.value);
 //}// end of function storeNewNodeText
 
-//---both LOGIN and EDITNODETEXT---
-
-//also use
 function closeWhenDone(event) {
     console.log(event);
+    localStorage.setItem(NODE_ID, null);
     close();
 }
 
@@ -92,6 +93,9 @@ var nodeToMove = null;
 var fromNode = null;
 var labelNode = null;
 var syncWorker = null;
+//Keep track of the node the local user most recently locked for editing.
+//We use this to make sure we unlock it when done.
+var nodeBeingEdited = null;
 
 //Add properties nodeText, dragTab, edgeTab as shortcuts to the appropriate child nodes.
 function makeNodeShortcuts(node) {
@@ -378,14 +382,14 @@ function postSetCoordinates(node,x,y) {
     }//end of if localCanEdit
 }//end of function postSetCoordinates
 
-function postSetText(id,text) {
+function postSetText(node,text) {
     //We already check whether local can edit before we open the editor window
     //and check whether the editing user has the lock before making the change to the SVG image.
     //We do not need to look up the node by its ID here.
     //if( node.localCanEdit() ) {
     var edit = new Object();
     edit[EDIT] = SET_TEXT;
-    edit[ID] = id;
+    edit[ID] = node.id;
     edit[TEXT] = text;
     postEdit(edit);
     //}//end of if localCanEdit
@@ -463,12 +467,14 @@ function launchEditNodeText(evt) {
     if( node.localCanEdit() ) {
         localStorage.setItem(VIEW_ID, viewId);
         localStorage.setItem(NODE_ID, node.id);
+        //Sets from within the same script do not trigger an event.
+        postLockOrUnlock(viewId, node.id);
         localStorage.setItem( NODE_TEXT, node.getText() );
         var strWindowFeatures = "left="+( screenX+node.getX() )+",top="+( screenY + node.getY() )+",width=300,height=100,menubar=0,toolbar=0,location=0,personalbar=0,status=0,dialog=1,scrollbars=0,titlebar=0,alwaysRaised=1";
-        postLockNode(node);
         var editor = open('../html/editnodetext.html', node.id, strWindowFeatures);
-        editor.onclose = function() {
-            postUnlockNode(node);
+        if( editor == null ) {
+            //If window opening failed, unset the node ID so that we will unlock the node.
+            postLockOrUnlock(viewId, null);
         }
     }//end of if localCanEdit
     stopBubbling(evt);
@@ -488,13 +494,33 @@ function launchEditNodeText(evt) {
 //    stopBubbling(evt);
 //}// end of function launchEditNodeText
 
+function postLockOrUnlock(editViewId, editNodeId) {
+    //Unlock any node that is currently locked for editing.
+    if(nodeBeingEdited != null) {
+        postUnlockNode(nodeBeingEdited);
+        nodeBeingEdited = null;
+    }//end of if some node is locked for editing
+    if( (editViewId == viewId) && (editNodeId != null) ) {
+        nodeBeingEdited = document.getElementById(editNodeId);
+        if(nodeBeingEdited != null) {
+            postLockNode(nodeBeingEdited);
+        }
+    }//end of we have a new node to edit in this view
+}// end of function postLockOrUnlock
+
 function nodeOnLocalStorageChange(evt) {
-    if( localStorage.getItem(VIEW_ID) == viewId ) {
-        //When the user updates a node we have from find, set the node in the view to match. 
-        if( evt.key == NODE_TEXT ) {
-            postSetText( localStorage.getItem(NODE_ID), localStorage.getItem(NODE_TEXT) );
-        }//end of if the thing that changed is node text
-    }// end of if the current document is the view being modified
+    console.log(evt);
+    var editViewId = localStorage.getItem(VIEW_ID);
+    var editNodeId = localStorage.getItem(NODE_ID);
+    if(evt.key == NODE_TEXT) {
+        if( (editViewId == viewId) && (nodeBeingEdited != null) ) {
+            //When the user updates a node we have from find, set the node in the view to match.
+            postSetText( nodeBeingEdited, localStorage.getItem(NODE_TEXT) );
+        }// end of if the current document is the view being modified
+    }//end of if the text changed
+    else if( (evt.key == VIEW_ID) || (evt.key == NODE_ID) ) {
+        postLockOrUnlock(editViewId, editNodeId);
+    }//end of if the view or node being edited changed
 }// end of function nodeOnLocalStorageChange
 
 function stopBubbling(evt) {
