@@ -38,7 +38,7 @@
 
 .node-text, .label-text {
     fill: black;
-    stroke: black;
+    stroke: transparent;
     font-family: sans-serif;
     text-anchor: left;
     font-size:12pt;
