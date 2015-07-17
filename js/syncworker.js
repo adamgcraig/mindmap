@@ -6,7 +6,7 @@
 //update_count: the number of updates the client has received so far, and
 //updates: a JSON representation of an array of update objects the client has generated locally.
 //It echoes a complete list of all the updates the client has not received yet, including the ones it just sent.
-var view = null;
+//var viewId = null;--defined in view.js
 var editCount = 0;
 var updateInterval = null;//for long-polling for updates
 var updateSource = null;//for server-generated update events
@@ -38,7 +38,8 @@ function parseUpdates(updatesJSON) {
     //We sometimes get the same edits re-sent. To guard against this, check the ID.
     for(var editIndex = 0; editIndex < updates.length; editIndex++) {
         if(updates[editIndex]['historyIndex'] > editCount) {
-            postMessage( updates[editIndex] );
+            //postMessage( updates[editIndex] );
+            handleUpdateFromServer( updates[editIndex] );//--defined in view.js
             editCount = updates[editIndex]['historyIndex'];
         }
     }//end of loop through edits
@@ -57,7 +58,7 @@ function requestUpdateAJAX() {
         //console.log(this.responseText);
         parseUpdates(this.responseText);
     };// end of onload
-    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(view)
+    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(viewId)
                             + "&update_count=" + encodeURIComponent(editCount);
     updateRequest.open("get",url,true);
     updateRequest.send();
@@ -76,40 +77,38 @@ function onErrorEventSource(err) {
 }// end of function onErrorEventSource
 
 function setUpdateRetrievalMode() {
+    //Close any pre-existing event source before starting a new one.
+    if(updateSource !== null) {
+        updateSource.close();
+        updateSource = null;
+    }//end of if we have an old view for which to tear down updates
+    //We should have at most one interval going at a time.
+    if(updateInterval !== null) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+    }//end of if we have an old view for which to tear down updates
     //I do not entirely trust if( typeof EventSource === 'undefined').
     //It evaluates to true on Firefox even though server generated events are supported since version 11.
-    try {
-         //Use server-generated events if possible.
-         //Close any pre-existing event source before starting a new one.
-         if(updateSource !== null) {
-             updateSource.close();
-             updateSource = null;
-         }//end of if we have an old view for which to tear down updates
-         if(view != null) {
-             console.log("Setting up event source:");
-             updateSource = new EventSource("../php/sendmessageonupdate.php?view=" + encodeURIComponent(view)
-                                                                + "&update_count=" + encodeURIComponent(editCount) );
-             updateSource.onmessage = onUpdateEventSource;
-             updateSource.onerror = onErrorEventSource;
-             updateSource.addEventListener("ping", function(e) {
-                                                       console.log("new server-generated event:");
-                                                       console.log(e);
-                                                    }, false);
-             console.log(updateSource);
-    }//end of if EventSource not supported
-    catch(e) {
-         //Fall back to using interval.
-         console.log("EventSource not supported, falling back to long polling.");
-         //We should have at most one interval going at a time.
-         if(updateInterval !== null) {
-             clearInterval(updateInterval);
-             updateInterval = null;
-         }//end of if we have an old view for which to tear down updates
-         if(view != null) {
-             updateInterval = setInterval(requestUpdateAJAX, 1000);//Request updates once per second.
-         }//end of if we have a new view for which to set up updates
-         }//end of if we have a new view for which to set up updates 
-    }//end of if EvenSource supported
+    if(viewId != null) {
+        try {
+            //Use server-generated events if possible.
+            console.log("Setting up event source:");
+            updateSource = new EventSource("../php/sendmessageonupdate.php?view=" + encodeURIComponent(viewId)
+                                                               + "&update_count=" + encodeURIComponent(editCount) );
+            updateSource.onmessage = onUpdateEventSource;
+            updateSource.onerror = onErrorEventSource;
+            updateSource.addEventListener("ping", function(e) {
+                                                      console.log("new server-generated event:");
+                                                      console.log(e);
+                                                   }, false);
+            console.log(updateSource);
+        }//end of if EventSource supported
+        catch(e) {
+            //Fall back to using interval.
+            console.log("EventSource not supported, falling back to polling server at intervals.");
+            updateInterval = setInterval(requestUpdateAJAX, 1000);//Request updates once per second.
+        }//end of if EventSource not supported
+    }//end of if we have a new view for which to set up updates
 }// end of function setUpdateBehavior
 
 function sendUpdateAJAX(singleUpdate) {
@@ -121,7 +120,7 @@ function sendUpdateAJAX(singleUpdate) {
         console.log("and received: "+this.responseText);
         console.log( "same: "+(updateString == this.responseText) );
     };
-    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(view)
+    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(viewId)
                             + "&update_count=" + encodeURIComponent(editCount)
                                  + "&updates=" + encodeURIComponent(updateString);
     updateRequest.open("get",url,true);
@@ -129,16 +128,21 @@ function sendUpdateAJAX(singleUpdate) {
     console.log("sent request: "+url);
 }// end of function requestUpdate
 
-onmessage = function(event) {
-    console.log("received message from main thread: ");
-    console.log(event.data);
-    if(event.data['edit'] == 'setViewId') {
-        console.log("received new view ID: "+event.data['viewId']);
-        view = event.data['viewId'];
+//--called in view.js
+function sendEditToServer(edit) {
+    console.log("sendEditToServer: new edit: ");
+    console.log(edit);
+    if(edit['edit'] == 'setViewId') {
+        console.log("received new view ID: "+edit['viewId']);
+        //viewId = edit['viewId'];
         setUpdateRetrievalMode();
     }//end of if we have a view ID
     else {
         //When we get an update, push it to the server.
-        sendUpdateAJAX(event.data);
+        sendUpdateAJAX(edit);
     }//end of if we are adding data to send to the server
 };//end of window.onmessage
+
+//onmessage = function(event) {
+//    handleEdit(event.data);
+//};//end of window.onmessage

@@ -4,6 +4,7 @@
 <!--Apparently, events have to be passed in as evt, not event in Firefox and should be passed in as evt in general.
     See http://stackoverflow.com/questions/8431503/onmouseover-event-in-firefox-inside-svg for more.-->
 <title id="viewId"></title>
+<script type="text/javascript" xlink:href="../js/syncworker.js"/>
 <script type="text/javascript" xlink:href="../js/view.js"/>
 <defs>
     <g id="nodeTemplate">

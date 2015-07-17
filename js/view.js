@@ -287,79 +287,84 @@ function removeEdge(edge) {
     to.edges.splice(index,1);
 }// end of function removeEdge
 
-function syncWorkerOnMessage(event) {
+function handleUpdateFromServer(edit) {
     console.log("received edit:");
-    console.log(event.data);
-    switch(event.data[EDIT]) {
+    console.log(edit);
+    switch(edit[EDIT]) {
         case SET_COORDINATES:
-            var node = document.getElementById(event.data[ID]);
+            var node = document.getElementById(edit[ID]);
             if(node != null) {
-                if( node.canEdit(event.data[USER_NAME]) ) {
-                    node.setCoordinates(event.data[X],event.data[Y]);
+                if( node.canEdit(edit[USER_NAME]) ) {
+                    node.setCoordinates(edit[X],edit[Y]);
                 }
             }
         break;
         case SET_TEXT:
-            var node = document.getElementById(event.data[ID]);
+            var node = document.getElementById(edit[ID]);
             if(node != null) {
-                if( node.canEdit(event.data[USER_NAME]) ) {
-                    node.setText(event.data[TEXT]);
+                if( node.canEdit(edit[USER_NAME]) ) {
+                    node.setText(edit[TEXT]);
                 }
             }
         break;
         case MAKE_NODE:
-            makeNode(event.data[ID],event.data[X],event.data[Y]);
+            makeNode(edit[ID],edit[X],edit[Y]);
         break;
         case REMOVE_NODE:
-            var node = document.getElementById(event.data[ID]);
+            var node = document.getElementById(edit[ID]);
             if(node != null) {
-                if( node.canEdit(event.data[USER_NAME]) ) {
+                if( node.canEdit(edit[USER_NAME]) ) {
                     removeNode(node);
                 }
             }
         break;
         case LOCK_NODE:
-            var node = document.getElementById(event.data[ID]);
+            var node = document.getElementById(edit[ID]);
             if(node != null) {
-                node.setLocked(true,event.data[USER_NAME]);
+                node.setLocked(true,edit[USER_NAME]);
             }
         break;
         case UNLOCK_NODE:
-            var node = document.getElementById(event.data[ID]);
+            var node = document.getElementById(edit[ID]);
             if(node != null) {
                 //Check that the right user is doing the unlocking.
-                if( node.getLockOwner() == event.data[USER_NAME] ) {
+                if( node.getLockOwner() == edit[USER_NAME] ) {
                     node.setLocked(false,null);
                 }
             }
         break;
         case MAKE_EDGE:
-            var id = event.data[ID];
-            var from = document.getElementById(event.data[FROM_ID]);
-            var label = document.getElementById(event.data[LABEL_ID]);
-            var to = document.getElementById(event.data[TO_ID]);
+            var id = edit[ID];
+            var from = document.getElementById(edit[FROM_ID]);
+            var label = document.getElementById(edit[LABEL_ID]);
+            var to = document.getElementById(edit[TO_ID]);
             if( (from != null) && (label != null) && (to != null) ) {
                 makeEdge(id,from,label,to);
             }
         break;
         case REMOVE_EDGE:
-            var edge = document.getElementById(event.data[ID]);
+            var edge = document.getElementById(edit[ID]);
             if(edge != null) {
                 removeEdge(edge);
             }
         break;
         default:
-            console.log("received unidentified edit command: "+event.data[EDIT]);
+            console.log("received unidentified edit command: "+edit[EDIT]);
     }//end of switch over different edits
 }// end of syncWorkerOnMessage
 
+//function syncWorkerOnMessage(event) {
+//    handleUpdateFromServer(event.data);
+//}// end of syncWorkerOnMessage
+
 function postEdit(edit) {
     edit[USER_NAME] = localStorage.getItem(USER_NAME);
-    if( syncWorker != null ) {
-        syncWorker.postMessage( edit );
-        console.log("sent edit:");
-        console.log(edit);
-    }
+    //if( syncWorker != null ) {
+    //    syncWorker.postMessage( edit );
+    //    console.log("sent edit:");
+    //    console.log(edit);
+    //}
+    sendEditToServer(edit);
 }//end of function postEdit
 
 //Set view ID just adds the view ID for future reference.
@@ -451,13 +456,13 @@ function postRemoveEdge(edge) {
 function viewOnload() {
     viewId = document.getElementById(VIEW_ID).textContent;
     addEventListener('storage',nodeOnLocalStorageChange);
-    if( window.Worker ) {
-        syncWorker = new Worker('../js/syncworker.js');
-        syncWorker.onmessage = syncWorkerOnMessage;
-    }
-    if(syncWorker == null) {
-        console.log("failed to create sync worker");
-    }
+    //if( window.Worker ) {
+    //    syncWorker = new Worker('../js/syncworker.js');
+    //    syncWorker.onmessage = syncWorkerOnMessage;
+    //}
+    //if(syncWorker == null) {
+    //    console.log("failed to create sync worker");
+    //}
     postSetViewId();
     //console.log("view loaded");
 }// end of function onloadView
