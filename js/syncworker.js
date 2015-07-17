@@ -1,32 +1,26 @@
-var view = null;
-var editQueue = [];
-var editCount = 0;
+//---Use EventSource if available, or fall back to Interval polling if not.---
+//EventSource use based on http://www.htmlgoodies.com/beyond/reference/receive-updates-from-the-server-using-the-eventsource.html
 
-//syncupdates.php takes in the _REQUEST three variables,
+//receiveupdate.php takes in the _REQUEST three variables,
 //view: the file name of the view of interest,
 //update_count: the number of updates the client has received so far, and
 //updates: a JSON representation of an array of update objects the client has generated locally.
 //It echoes a complete list of all the updates the client has not received yet, including the ones it just sent.
+var view = null;
+var editCount = 0;
+var updateInterval = null;//for long-polling for updates
+var updateSource = null;//for server-generated update events
 
-onmessage = function(event) {
-    //console.log("received message from main thread: ");
-    //console.log(event.data);
-    if(event.data['edit'] == 'setViewId') {
-        console.log("received new view ID: "+event.data['viewId']);
-        view = event.data['viewId'];
-        return;
-    }
-    editQueue.push(event.data);
-}// end of onmessage from main view thread
+//---Handle received updates the same way whether using EventSource or Interval polling.---
 
-function onUpdate() {
-    //console.log("received response: "+this.responseText);
+function parseUpdates(updatesJSON) {
+    //console.log("received response: "+updatesJSON);
     try {
-        var updates = JSON.parse(this.responseText);
+        var updates = JSON.parse(updatesJSON);
     }
     catch(exception) {
         console.log("could not parse response text: ");
-        console.log(this.responseText);
+        console.log(updatesJSON);
         console.log(exception);
         return;
     }
@@ -41,26 +35,110 @@ function onUpdate() {
     //}
     //For some reason, the JSON parsers expect the numeric arrays to come wrapped in Objects.
     updates = updates['updates'];
+    //We sometimes get the same edits re-sent. To guard against this, check the ID.
     for(var editIndex = 0; editIndex < updates.length; editIndex++) {
-        postMessage( updates[editIndex] );
+        if(updates[editIndex]['historyIndex'] > editCount) {
+            postMessage( updates[editIndex] );
+            editCount = updates[editIndex]['historyIndex'];
+        }
     }//end of loop through edits
-    editCount = editCount + updates.length;
-}// end of function onUpdate
+}//end of function parseUpdates
 
-function requestUpdate() {
-    if(view == null) {
-        console.log("view is still null");
-        return;
-    }
+//Even though receiveupdate.php both receives updates and sends them out, do these things in separate calls.
+//We currently send an update when we get it from the main (user interface) thread.
+//We receive an update either when we poll the server or when we receive a server-generated event.
+//At present, the client does not have a way to determine when it is receiving the same update twice,
+//so send updates using sendUpdateAJAX, disregarding the updates it returns,
+//and, when polling the server, use requestUpdateAJAX, not sending any updates.
+function requestUpdateAJAX() {
     var updateRequest = new XMLHttpRequest();
-    updateRequest.onload = onUpdate;
-    var url = "../php/syncupdates.php?view=" + encodeURIComponent(view)
-                          + "&update_count=" + encodeURIComponent(editCount) 
-                               + "&updates=" + encodeURIComponent( JSON.stringify({ 'updates': editQueue }) );
-    editQueue = [];//Empty the edit queue now that we have dumped all the edits into the request for transmission to the server.
+    updateRequest.onload = function() {
+        //console.log("receieved AJAX response:");
+        //console.log(this.responseText);
+        parseUpdates(this.responseText);
+    };// end of onload
+    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(view)
+                            + "&update_count=" + encodeURIComponent(editCount);
     updateRequest.open("get",url,true);
     updateRequest.send();
-    //console.log("sent request: "+url);
+    console.log("sent request: "+url);
 }// end of function requestUpdate
 
-var updateInterval = setInterval(requestUpdate, 500);//milliseconds 1frame/50milliseconds = 1000frames/50seconds = 20 frames/second
+function onUpdateEventSource(evt) {
+    console.log("received server-generated event");
+    console.log(evt);
+    parseUpdates(evt.data);
+}// end of function onUpdate
+
+function onErrorEventSource(err) {
+    console.log("event source encountered an error:");
+    console.log(err);
+}// end of function onErrorEventSource
+
+function setUpdateRetrievalMode() {
+    //I do not entirely trust if( typeof EventSource === 'undefined').
+    //It evaluates to true on Firefox even though server generated events are supported since version 11.
+    try {
+         //Use server-generated events if possible.
+         //Close any pre-existing event source before starting a new one.
+         if(updateSource !== null) {
+             updateSource.close();
+             updateSource = null;
+         }//end of if we have an old view for which to tear down updates
+         if(view != null) {
+             console.log("Setting up event source:");
+             updateSource = new EventSource("../php/sendmessageonupdate.php?view=" + encodeURIComponent(view)
+                                                                + "&update_count=" + encodeURIComponent(editCount) );
+             updateSource.onmessage = onUpdateEventSource;
+             updateSource.onerror = onErrorEventSource;
+             updateSource.addEventListener("ping", function(e) {
+                                                       console.log("new server-generated event:");
+                                                       console.log(e);
+                                                    }, false);
+             console.log(updateSource);
+    }//end of if EventSource not supported
+    catch(e) {
+         //Fall back to using interval.
+         console.log("EventSource not supported, falling back to long polling.");
+         //We should have at most one interval going at a time.
+         if(updateInterval !== null) {
+             clearInterval(updateInterval);
+             updateInterval = null;
+         }//end of if we have an old view for which to tear down updates
+         if(view != null) {
+             updateInterval = setInterval(requestUpdateAJAX, 1000);//Request updates once per second.
+         }//end of if we have a new view for which to set up updates
+         }//end of if we have a new view for which to set up updates 
+    }//end of if EvenSource supported
+}// end of function setUpdateBehavior
+
+function sendUpdateAJAX(singleUpdate) {
+    var updateRequest = new XMLHttpRequest();
+    var updateString = JSON.stringify({ 'updates': [ singleUpdate ] });
+    //Use onload as a check that the update it sends back is the one we sent to it.
+    updateRequest.onload = function() {
+        console.log("request sent: "+updateString);
+        console.log("and received: "+this.responseText);
+        console.log( "same: "+(updateString == this.responseText) );
+    };
+    var url = "../php/receiveupdate.php?view=" + encodeURIComponent(view)
+                            + "&update_count=" + encodeURIComponent(editCount)
+                                 + "&updates=" + encodeURIComponent(updateString);
+    updateRequest.open("get",url,true);
+    updateRequest.send();
+    console.log("sent request: "+url);
+}// end of function requestUpdate
+
+onmessage = function(event) {
+    console.log("received message from main thread: ");
+    console.log(event.data);
+    if(event.data['edit'] == 'setViewId') {
+        console.log("received new view ID: "+event.data['viewId']);
+        view = event.data['viewId'];
+        setUpdateRetrievalMode();
+    }//end of if we have a view ID
+    else {
+        //When we get an update, push it to the server.
+        sendUpdateAJAX(event.data);
+    }//end of if we are adding data to send to the server
+};//end of window.onmessage

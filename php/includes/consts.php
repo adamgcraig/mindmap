@@ -3,8 +3,8 @@
 define('NODE_PATH','../nodes/');
 //relative path to directory containing view files:
 define('VIEW_PATH','../views/');
-//minimum amount of memory to keep free, 2GB
-define('MEMORY_SAFETY_MARGIN', 2000000000);
+//minimum amount of memory to keep free, 2000000000 2GB
+define('MEMORY_SAFETY_MARGIN', 2000000);//temporarily down to 2MB so that we can test despite some other process that is taking up a bunch of memory
 //maximum length of node name:
 define('MAX_NAME_LENGTH',255);
 //PHP's built-in Levenshtein function limits string arguments to a maximum length of 255 characters:
@@ -52,6 +52,8 @@ define('DISTANCE_BY_TEXT_CASE_INSENSITIVE','distance_by_text_case_insensitive');
 //VIEW (defined above)
 define('UPDATE_COUNT','update_count');
 define('UPDATES','updates');
+//key in update associatve arrays in the edit history of a view, serves as a unique identifier for each edit in the view
+define('HISTORY_INDEX','historyIndex');
 //key in update associatve arrays in the edit history of a view, indicates when we logged this update, used for backtracking:
 define('TIMESTAMP','timestamp');
 //properties of view included in output of findview, indicate timestamps first and most recent edits:
@@ -63,4 +65,20 @@ define('SOURCES','sources');
 //key in update associative arrays in the edit history of a view; 
 //if present, indicates the edit was part of the view from which this view was cloned:
 define('IS_PRE_CLONE','is_pre_clone');
+//maximum time between server generated events sent to view in seconds;
+//if no events are ready when it is time to send something, send a keep-alive:
+define('KEEPALIVE_INTERVAL',1);
+//*The message queue system does not seem to work right, so we are not using it.*
+////We create a different message queue file for each view when using the msg_... module:
+////define('UPDATE_QUEUE_PATH','../messagequeues/');
+////Use this file suffix for the message queue file:
+//define('UPDATE_QUEUE_SUFFIX','.stat');
+////It also requires a single-character project identifier.
+////Use this project for the queue to which sendmessageonupdate.php instances post their message-type IDs:
+//define('UPDATE_LISTENER_PROJECT_IDENTIFIER','U');
+////Use this project for the queue to which receiveupdate.php instances post their new update counts:
+//define('UPDATE_COUNT_PROJECT_IDENTIFIER','U');
+////The update is just the new update count. 
+////sendmessageonupdate.php will read the updates themselves from a file.
+//define('UPDATE_MESSAGE_MAX_SIZE',PHP_INT_SIZE);
 ?>

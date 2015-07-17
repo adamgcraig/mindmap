@@ -191,9 +191,10 @@ if($dest_edits_string === FALSE) {
 }
 
 //Check that we have enough free disk space.
-if( disk_free_space(".") - strlen($dest_edits_string) <  MEMORY_SAFETY_MARGIN) {
-    exit_with_error_json("Creating the new edit history \"".$dest_edit_history_path."\" would leave fewer than ".MEMORY_SAFETY_MARGIN." bytes of disk space.");
-}
+//This check produces false positives on Linux servers, because they tend to use free memory for temporary files and clear it as needed.
+//if( disk_free_space(".") - strlen($dest_edits_string) <  MEMORY_SAFETY_MARGIN) {
+//    exit_with_error_json("Creating the new edit history \"".$dest_edit_history_path."\" would leave fewer than ".MEMORY_SAFETY_MARGIN." bytes of disk space.");
+//}
 
 //Write the edits to the file.
 if( file_put_contents($dest_edit_history_path,$dest_edits_string,LOCK_EX) == FALSE ) {

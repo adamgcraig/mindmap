@@ -36,7 +36,7 @@ function exit_on_bad_node_name($name) {
     if($name_has_bad_char) {
         exit_with_error_json( "The name \"".$name."\" contains a character that was not a letter, number, or underscore." );
     }
-
+    
     //Check that the name is not too long.
     if( strlen($name) > MAX_NAME_LENGTH ) {
         exit_with_error_json( "The name \"".$name."\" is longer than ".MAX_NAME_LENGTH." bytes." );
@@ -48,9 +48,10 @@ function exit_on_bad_node_name($name) {
     }
     
     //Check that creating the directory will leave a safe amount of free disk space.
-    if( disk_free_space('.') - strlen($name) <  MEMORY_SAFETY_MARGIN) {
-        exit_with_error_json("Creating a file or directory named \"".$name."\" would leave fewer than ".MEMORY_SAFETY_MARGIN." bytes of disk space.");
-    }
+    //Since Linux keeps various temporary files around until it needs to clear them, this may not reflect all the memory potentially available.
+    //if( disk_free_space('.') - strlen($name) <  MEMORY_SAFETY_MARGIN) {
+    //    exit_with_error_json("Creating a file or directory named \"".$name."\" would leave fewer than ".MEMORY_SAFETY_MARGIN." bytes of disk space. ".disk_free_space('.')." bytes currently free.");
+    //}
     
 }//end of function exit_on_bad_node_name
 ?>
