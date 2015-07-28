@@ -53,7 +53,7 @@ $last_message_sent_time = 0;//Use this to keep track of when we should send keep
 while(1) {
     
     $should_send = FALSE;//Assume we should not send until we find that one of the conditions where we should send is true.
-    
+    /*
     //c (open for reading, create if not exists) 
     //+(open for writing too) 
     //b(Do not translate new line characters between Windows and Unix conventions.)
@@ -70,7 +70,7 @@ while(1) {
         $flock_error = error_get_last();
         exit_with_error_json( "Attempt to lock file ".$edit_history_path." failed: ".$flock_error['message'] );
     }
-        
+    */    
     clearstatcache();//Do not let it cache the existence, length, or last modified time.
     $edit_file_exists = is_file($edit_history_path);
     if( $edit_file_exists ) {
@@ -89,9 +89,9 @@ while(1) {
     $has_new_edits = $new_last_modified_time > $old_last_modified_time;
     
     if($has_new_edits) {
-            
-        //$edits_string = @file_get_contents( $edit_history_path );
-        $edits_string = @fread( $edit_history_file, $file_length );
+        
+        $edits_string = @file_get_contents( $edit_history_path );
+        //$edits_string = @fread( $edit_history_file, $file_length );
         if($edits_string === FALSE) {
             $fread_error = error_get_last();
             exit_with_error_json( "Attempt to read file ".$edit_history_path." failed: ".$fread_error['message'] );
@@ -124,7 +124,9 @@ while(1) {
             if($new_edits_string === FALSE) {
                 exit_with_error_json( "Attempt to serialize new edits failed: ".json_last_error() );
             }
-             
+            
+            //Set the retry "The reconnection time to use when attempting to send the event."
+            echo("retry: 1000\n");//milliseconds 
             //A stream broadcast must begin with "data:".
             echo("data: ".$new_edits_string);
             //A stream broadcast must end with an empty line.
@@ -152,7 +154,7 @@ while(1) {
         flush();
         $last_message_sent_time = time();
     }
-    
+    /*
     if( flock($edit_history_file, LOCK_UN) === FALSE ) {
         $funlock_error = error_get_last();
         exit_with_error_json( "Attempt to unlock file ".$edit_history_path." failed: ".$funlock_error['message'] );
@@ -162,7 +164,7 @@ while(1) {
         $fclose_error = error_get_last();
         exit_with_error_json( "Attempt to close file ".$edit_history_path." failed: ".$fclose_error['message'] );
     }
-    
+    */
     //Store the last modified time for the next iteration.
     $old_last_modified_time = $new_last_modified_time;
     
