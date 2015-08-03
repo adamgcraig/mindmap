@@ -38,7 +38,7 @@ if( isset($_REQUEST[UPDATES]) ) {
         $updates = $updates[UPDATES];
     }
     else {
-        exit_with_error_json( "Updates is missing key ".UPDATES."." );
+        exit_with_error_json( "Updates is missing key ".UPDATES.": ".$_REQUEST[UPDATES] );
     }
 }
 else {
